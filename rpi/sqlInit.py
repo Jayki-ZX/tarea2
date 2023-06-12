@@ -33,7 +33,7 @@ create_table_configBLE = '''CREATE TABLE configBLE (
 
 create_table_lossBLE = '''CREATE TABLE lossBLE (
     attemps INTEGER,
-    connection_delay STRING    
+    connection_delay STRING  
 );'''
 
 conn = sql.connect("tarea2.sqlite")
@@ -48,7 +48,7 @@ except Exception:
 
 # Se configura el envio de mensajes variando los protocolos. Esto es un ejemplo para demostrar el correcto funcionamiento
 cur.execute('''INSERT INTO configBLE values(0), (1), (2), (3), (0), (1), (2), (3)''')
-print(cur.execute("SELECT * FROM configBLE").fetchall()[1][0]) #Asi obtenemos el valor 1 de la entrada 1-esima
+print(cur.execute("SELECT * FROM configBLE").fetchall()) #Asi obtenemos el valor 1 de la entrada 1-esima
 conn.commit()
 conn.close()
 

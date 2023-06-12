@@ -43,6 +43,8 @@ static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 
 #define GATTS_SERVICE_UUID_TEST_A   0x00FF
 #define GATTS_CHAR_UUID_TEST_A      0xFF01
+#define GATTS_CHAR_UUID_TEST_A_2      0xFF02
+#define GATTS_CHAR_UUID_TEST_A_3      0xFF03
 #define GATTS_DESCR_UUID_TEST_A     0x3333
 #define GATTS_NUM_HANDLE_TEST_A     4
 
@@ -54,7 +56,7 @@ static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 #define TEST_DEVICE_NAME            "ESP_GATTS_DEMO"
 #define TEST_MANUFACTURER_DATA_LEN  17
 
-#define GATTS_DEMO_CHAR_VAL_LEN_MAX 0x40
+#define GATTS_DEMO_CHAR_VAL_LEN_MAX 0x60
 
 #define PREPARE_BUF_MAX_SIZE 1024
 
@@ -366,32 +368,15 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         // esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
         //                             ESP_GATT_OK, &rsp);
         memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
-        if(recv_protocol == 0x03) {
-            // protocol 3 not implemented
-            // esp_gatt_rsp_t rsp2;
-            // rsp2.attr_value.handle = param->read.handle;
-            // rsp2.attr_value.len = 22;
-            // rsp.attr_value.handle = param->read.handle;
-            // rsp.attr_value.len = 22;
-            // char* data = malloc(dataLength(recv_protocol));
-            // memcpy(rsp.attr_value.value, data, rsp.attr_value.len);
-            // memcpy(rsp2.attr_value.value, &(data[22]), rsp2.attr_value.len);
-            esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
-                                        ESP_GATT_OK, &rsp);
-            // esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
-            //                             ESP_GATT_OK, &rsp2);
-        }
-        else {
-            rsp.attr_value.handle = param->read.handle;
-            rsp.attr_value.len = dataLength(recv_protocol);
-            char* data = malloc(dataLength(recv_protocol));
-            if(recv_protocol == 0x00) data = dataprotocol0();
-            if(recv_protocol == 0x01) data = dataprotocol1();
-            if(recv_protocol == 0x02) data = dataprotocol2();
-            memcpy(rsp.attr_value.value, data, rsp.attr_value.len);
-            esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
-                                        ESP_GATT_OK, &rsp);
-        }
+        rsp.attr_value.handle = param->read.handle;
+        rsp.attr_value.len = messageLength(recv_protocol);
+        char* msg = malloc(messageLength(recv_protocol));
+        // transport_layer  3 -> ble
+        memcpy(msg, mensaje(recv_protocol, 3), rsp.attr_value.len);
+        memcpy(rsp.attr_value.value, msg, rsp.attr_value.len);
+        free(msg);
+        esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
+                                    ESP_GATT_OK, &rsp);
         
         break;
     }

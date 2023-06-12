@@ -10,8 +10,6 @@ import traceback
 import time
 import sys
 from DatabaseWork import *
-from juntarFragm import *
-
 
 # Funciones de desempaquetamiento
 # Patron de desempaquetamiento de la data
@@ -25,8 +23,7 @@ def headerUnpack(header):
 
 # Desempaquetamiento de la data
 def mainUnpackData(protocol:int, data):
-    print(data)
-    if protocol not in [0, 1, 2, 3, 4]:
+    if protocol not in [0, 1, 2, 3]:
         print("Error: protocol doesnt exist")
         return None
     def protFunc(protocol, keys):
@@ -34,10 +31,10 @@ def mainUnpackData(protocol:int, data):
             unp = dataUnpack(protocol, data)
             return {key:val for (key,val) in zip(keys, unp)}
         return p
-    p0 = ["Val", "Batt_level", "Timestamp"]
-    p1 = ["Val", "Batt_level", "Timestamp", "Temp", "Pres", "Hum", "Co"]
-    p2 = ["Val", "Batt_level", "Timestamp", "Temp", "Pres", "Hum", "Co", "RMS"]
-    p3 = ["Val", "Batt_level", "Timestamp", "Temp", "Pres", "Hum", "Co", "RMS", "Ampx", "Frecx", "Ampy", "Frecy", "Ampz", "Frecz"]
+    p0 = ["Val", "Batt_level", "timestamp"]
+    p1 = ["Val", "Batt_level", "timestamp", "Temp", "Pres", "Hum", "Co"]
+    p2 = ["Val", "Batt_level", "timestamp", "Temp", "Pres", "Hum", "Co", "RMS"]
+    p3 = ["Val", "Batt_level", "timestamp", "Temp", "Pres", "Hum", "Co", "RMS", "Ampx", "Frecx", "Ampy", "Frecy", "Ampz", "Frecz"]
     p = [p0, p1, p2, p3]
 
     try:
@@ -61,7 +58,7 @@ def mainUnpackPackage(package):
     return headerDict, dataDict
 
 #Perdida de paquetes
-lengmsg = [6, 16, 20, 44, 12016]
+lengmsg = [6, 16, 20, 44]
 def dataLength(protocol):
     return lengmsg[protocol]
 
@@ -75,39 +72,49 @@ def perdida(data, protocol):
 
 
 # Discover esp
+initial_time = time.time()
 service = DiscoveryService("hci0")
 devices = service.discover(2)
 mac = ''
 
-print("Found devices:")
+print("Dispositivos encontradoss:")
 for address, name in devices.items():
-    print("name: {}, address: {}".format(name, address))
+    print("nombre: {}, address: {}".format(name, address))
     if name == "ESP_GATTS_DEMO":
-        print("Found esp32, saving mac address...")
+        print("Se encontró esp32, guardando su mac address...")
         mac = address
         break
 
 # Send protocol
+print("Conectando con la esp")
 req = GATTRequester(mac)
-#todo: Ver como contabilizar la cantidad de veces que se intenta conectar con GATTRequester antes de conectarse correctamente
-
+end_time = time.time()
+print("Conexión establecida, guardando dato Loss")
+guardarLossBLE(str(end_time - initial_time))
+req.exchange_mtu(100)
+req.set_mtu(100)
 #Ciclo while de envio y recibo de mensajes
 iteracion = 0
 while(True):
-    protocolo_actual = consultarconfigBLE(iteracion)
-    print("Sending protocol number...")
+    protocolo_actual = consultarconfigBLE(iteracion)[0][0]
+    print("Protocolo numero {}".format(protocolo_actual))
+    print("Enviando protocolo de configuracion...")
+
     # el handle lo saque del prompt de la esp, en decimal es 42
-    req.write_by_handle(0x2A, protocolo_actual)
+    req.write_by_handle(0x2A, bytes([protocolo_actual]))
 
     # Receive and process data
-    print("Waiting for data response...")
+    print("Esperando respuesta...")
     # SUPONGAMOS QUE EL PAQUETE RECIBIDO SE GUARDA EN LA VARIABLE package, una cadena binaria
-    package = 1 #cambiar esta linea por la que recibe el paquete de la esp
-    print("Recibido correctamente el paquete")
+    package = req.read_by_handle(0x2a)[0] #cambiar esta linea por la que recibe el paquete de la esp
+    print("Recibido correctamente el paquete, guardando log de comunicación")
+    # Se considera la id device igual que la mac para este caso
+    guardarLogsBLE(mac, protocolo_actual, mac, str(time.time()))
     # Extrae los datos del paquete guardandolos en diccionarios
     headerDict, dataDict = mainUnpackPackage(package)
     print("Desempaquetado correctamente el paquete")
     # Guarda los datos en la base de datos tabla datosBLE
     guardarDatosBLE(headerDict, dataDict)
     print("Guardado correctamente en la base de datos")
-    iteracion += 1
+    iteracion = (iteracion + 1) % 4
+    time.sleep(1)
