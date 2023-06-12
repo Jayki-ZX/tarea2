@@ -69,6 +69,8 @@ static esp_attr_value_t gatts_demo_char1_val =
     .attr_value   = char1_str,
 };
 
+char recv_protocol = 0x00;
+
 static uint8_t adv_config_done = 0;
 #define adv_config_flag      (1 << 0)
 #define scan_rsp_config_flag (1 << 1)
@@ -354,36 +356,63 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
     case ESP_GATTS_READ_EVT: {
         ESP_LOGI(GATTS_TAG, "GATT_READ_EVT, conn_id %d, trans_id %" PRIu32 ", handle %d\n", param->read.conn_id, param->read.trans_id, param->read.handle);
         esp_gatt_rsp_t rsp;
+        // memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
+        // rsp.attr_value.handle = param->read.handle;
+        // rsp.attr_value.len = 4;
+        // rsp.attr_value.value[0] = 0xde;
+        // rsp.attr_value.value[1] = 0xed;
+        // rsp.attr_value.value[2] = 0xbe;
+        // rsp.attr_value.value[3] = 0xef;
+        // esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
+        //                             ESP_GATT_OK, &rsp);
         memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
-        rsp.attr_value.handle = param->read.handle;
-        rsp.attr_value.len = 4;
-        rsp.attr_value.value[0] = 0xde;
-        rsp.attr_value.value[1] = 0xed;
-        rsp.attr_value.value[2] = 0xbe;
-        rsp.attr_value.value[3] = 0xef;
-        esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
-                                    ESP_GATT_OK, &rsp);
+        if(recv_protocol == 0x03) {
+            // protocol 3 not implemented
+            // esp_gatt_rsp_t rsp2;
+            // rsp2.attr_value.handle = param->read.handle;
+            // rsp2.attr_value.len = 22;
+            // rsp.attr_value.handle = param->read.handle;
+            // rsp.attr_value.len = 22;
+            // char* data = malloc(dataLength(recv_protocol));
+            // memcpy(rsp.attr_value.value, data, rsp.attr_value.len);
+            // memcpy(rsp2.attr_value.value, &(data[22]), rsp2.attr_value.len);
+            esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
+                                        ESP_GATT_OK, &rsp);
+            // esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
+            //                             ESP_GATT_OK, &rsp2);
+        }
+        else {
+            rsp.attr_value.handle = param->read.handle;
+            rsp.attr_value.len = dataLength(recv_protocol);
+            char* data = malloc(dataLength(recv_protocol));
+            if(recv_protocol == 0x00) data = dataprotocol0();
+            if(recv_protocol == 0x01) data = dataprotocol1();
+            if(recv_protocol == 0x02) data = dataprotocol2();
+            memcpy(rsp.attr_value.value, data, rsp.attr_value.len);
+            esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
+                                        ESP_GATT_OK, &rsp);
+        }
+        
         break;
     }
     case ESP_GATTS_WRITE_EVT: {
         ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, conn_id %d, trans_id %" PRIu32 ", handle %d", param->write.conn_id, param->write.trans_id, param->write.handle);
         char protocol = param->write.value[0];
         if(protocol == 0x00) {
-            // send normal response
             ESP_LOGI("LOGGING FROM WRITE", "Asked for protocol 0");
-            char *data = dataprotocol0();
+            recv_protocol = 0x00;
         }
         else if(protocol == 0x01) {
             ESP_LOGI("LOGGING FROM WRITE", "Asked for protocol 1");
-            // send normal response
+            recv_protocol = 0x01;
         }
         else if(protocol == 0x02) {
             ESP_LOGI("LOGGING FROM WRITE", "Asked for protocol 2");
-            // send response executive
+            recv_protocol = 0x02;
         }
         else if(protocol == 0x03) {
             ESP_LOGI("LOGGING FROM WRITE", "Asked for protocol 3");
-            // send response executive
+            recv_protocol = 0x03;
         }
 
         if (!param->write.is_prep){
