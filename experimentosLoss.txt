@@ -1,0 +1,20 @@
+Sin maquina de estados
+attempts | connection_time
+[(1, 1.8612501621246336), 
+(1, 1.592155694961548), 
+(1, 1.9396259784698489)]
+
+Con (intento de) maquina de estados
+En esta implementacion la RPI hace una conexion por protocolo a la esp, esto se hizo pensando en implementar
+el deep sleep en la esp, que causa que se apague todo, teniendo que generar una nueva conexion. Aunque alfinal
+no se alcanzo a implementar la parte del deep_sleep en la esp. Independiente de lo anterior, para ahorrar un poco de tiempo
+solo se ejecuta el servicio de discovery en la primera conexion del programa, luego se guarda la mac address y se conecta
+directamente con la mac address.
+
+Cada fila representa una ejecucion del programa, la primera columna de datos representa la primera conexion (es decir, 
+con discovery) y las otras representan los tiempos de conexion ya teniendo la mac address guardada.
+
+attempts | connection_time
+[(1, 2.9274938106536865), 
+(1, 1.9109246730804443), 
+(1, 1.444849967956543), (1, 0.0005745887756347656), (1, 0.000766754150390625), (1, 0.0007653236389160156)]
